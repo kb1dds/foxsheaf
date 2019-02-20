@@ -1,0 +1,5 @@
+foxsheaf
+pysheaf>=0.1
+numpy>=1.15.4
+matplotlib>=3.0.2
+networkx>=2.2
