@@ -1,9 +1,10 @@
 # Data generator for fox hunting simulation
+# (c) 2019 Michael Robinson
 
 import csv
 import numpy as np
-import matplotlib.pyplot as plt
-import scipy.stats
+import matplotlib.pyplot as plt # Only needed in the test script
+import scipy.stats # For random variables
 
 class ReceptionReport:
     def __init__(self,time,location,rssi,bearing,tx_identity):
@@ -43,38 +44,45 @@ class Transmitter:
         bearing = np.arctan2(self.location[0]-rx_location[0],self.location[1]-rx_location[1])
         if rx_antenna_beamwidth is not None:
             bearing = np.random.vonmises(bearing,
-                                         1/(rx_antenna_beamwidth*np.pi/180)**2)[0]
+                                         1/(rx_antenna_beamwidth*np.pi/180)**2)
         return ReceptionReport(rx_time,rx_location,float(rssi),bearing*180/np.pi,self.identity)
 
 class Receiver:
     def __init__(self,rx_noise_level=None,rx_antenna_beamwidth=None,name=None):
+        """A receiver with a name and a fixed set of equipment and possibly variable location.  The equipment has a background noise level and antenna beamwidth.  Locations get paired with the reception reports of the receiver, not in this constructor"""
         self.rx_noise_level=rx_noise_level
         self.rx_antenna_beamwidth=rx_antenna_beamwidth
         self.name=None
         self.reception_reports=[]
 
     def add_reception(self,time,location,transmitter):
+        """Have this receiver make a report of a given Transmitter at a given time and location"""
         self.reception_reports.append(transmitter.reception(time,
                                                             location, 
                                                             self.rx_noise_level,
                                                             self.rx_antenna_beamwidth))
 
     def plot_bearings(self):
+        """Courtesy function for plotting the bearings in this Reeiver's reception reports"""
         plt.plot([r.bearing for r in self.reception_reports])
 
     def plot_rssis(self):
+        """Courtesy function for plotting the Received Signal Strength Indications (RSSI) in this Reeiver's reception reports"""
         plt.plot([r.rssi for r in self.reception_reports])
 
     def plot_locations(self):
+        """Courtesy function for plotting the locations in this Reeiver's reception reports"""
         plt.plot([r.location[0] for r in self.reception_reports],
                  [r.location[1] for r in self.reception_reports])
 
     def write_csv(self,filename):
+        """Write this Receiver's reception reports to a CSV file"""
         with open(filename,'wt') as fp:
             for r in self.reception_reports:
                 fp.write(repr(r)+'\n')
 
     def read_csv(self,filename):
+        """Read a CSV file containing reception reports.  These are appended to this Receiver's reception reports"""
         with open(filename,'rt') as fp:
             for row in csv.reader(fp):
                 self.reception_reports.append(ReceptionReport(time=float(row[0]),
@@ -84,6 +92,7 @@ class Receiver:
                                                               bearing=float(row[5])))
         
 class TrackingReceiver(Receiver):
+    """Wrapper class for receiving a collection of reception reports at once"""
     def __init__(self,start_time,start_location,speed_factor,steps,transmitter,rx_noise_level=None,rx_antenna_beamwidth=None):
         Receiver.__init__(self,rx_noise_level,rx_antenna_beamwidth)
 
@@ -97,16 +106,10 @@ class TrackingReceiver(Receiver):
             time += 1.0
 
 if __name__ == 'main':
+    # A short demonstration, saving data as a CSV file for later inspection
     tx=Transmitter(np.array([0.,0.]),1,'A')
     rx=TrackingReceiver(0.,np.array([1.,0.]),0.005,10,tx,rx_noise_level=0.01,rx_antenna_beamwidth=10)
     rx.name='1'
-    #plt.figure()
-    #rx.plot_rssis()
-    #plt.figure()
-    #rx.plot_bearings()
-    #plt.figure()
-    #rx.plot_locations()
-    #plt.show()
     rx.write_csv('test.csv')
     
     rx2=Receiver()
